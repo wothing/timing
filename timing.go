@@ -3,8 +3,9 @@ package timing
 import (
 	"container/heap"
 	"fmt"
-	"sync/atomic"
 	"time"
+
+	"github.com/pborman/uuid"
 )
 
 type HandlerFunc func(items ...*Item)
@@ -13,8 +14,8 @@ var (
 	// PersistFunc 落地定时项，以便系统重启后，恢复定时项
 	PersistFunc HandlerFunc = func(items ...*Item) {}
 
-	// RemoveFunc 时间到了，从落地库中移除定时项
-	RemoveFunc HandlerFunc = func(items ...*Item) {}
+	// DeleteFunc 时间到了，从落地库中移除定时项
+	DeleteFunc HandlerFunc = func(items ...*Item) {}
 
 	// RemindFunc 时间到了，提醒，处理定时项
 	RemindFunc HandlerFunc = func(items ...*Item) {
@@ -27,20 +28,13 @@ var (
 	inited = make(chan struct{})
 )
 
-var next = func() func() uint32 {
-	var id uint32
-	return func() uint32 {
-		return atomic.AddUint32(&id, 1)
-	}
-}()
-
 // Init 初始化定时器，并启动
 func Init(items ...*Item) {
 	q := make(Queue, len(items), 1024)
 	for i, item := range items {
-		item.Id = next()
+		// item.Id = uuid.New()
+		// PersistFunc(item) // 初始化最大可能是从落地库中恢复定时项，无需重复落地
 		q[i] = item
-		PersistFunc(item)
 	}
 	go start(q)
 }
@@ -50,7 +44,7 @@ func Add(items ...*Item) {
 	<-inited
 
 	for _, item := range items {
-		item.Id = next()
+		item.Id = uuid.New()
 		stage <- item
 	}
 }
@@ -63,33 +57,34 @@ func start(q Queue) {
 
 	if len(q) > 0 {
 		min = heap.Pop(&q).(*Item)
-		timer = time.NewTimer(time.Unix(int64(min.When), 0).Sub(time.Now()))
+		timer = time.NewTimer(time.Unix(int64(min.Timed), 0).Sub(time.Now()))
 	}
 
 	close(inited)
 	for {
 		select {
 		case item := <-stage:
+			PersistFunc(item)
+
 			if min == nil {
 				// do nothing
-			} else if item.When < min.When {
+			} else if item.Timed < min.Timed {
 				heap.Push(&q, min)
-			} else if item.When > min.When {
+			} else if item.Timed > min.Timed {
 				heap.Push(&q, item)
 				break
 			}
 
 			min = item
-			PersistFunc(min)
 
-			until := time.Unix(int64(min.When), 0)
+			until := time.Unix(int64(min.Timed), 0)
 			dur := until.Sub(time.Now())
 			timer.Reset(dur)
 
 		case <-timer.C:
 			if min != nil {
 				go func(item *Item) {
-					RemoveFunc(item)
+					DeleteFunc(item)
 					RemindFunc(item)
 				}(min)
 			}
@@ -103,7 +98,7 @@ func start(q Queue) {
 
 			min = heap.Pop(&q).(*Item)
 
-			until := time.Unix(int64(min.When), 0)
+			until := time.Unix(int64(min.Timed), 0)
 			dur := until.Sub(time.Now())
 			timer.Reset(dur)
 		}

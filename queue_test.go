@@ -29,7 +29,7 @@ func TestQueue(t *testing.T) {
 	item := &Item{
 		Event: "orange",
 		Param: "xatarstiarsd",
-		When:  13,
+		Timed: 13,
 	}
 	heap.Push(&pq, item)
 
@@ -37,7 +37,7 @@ func TestQueue(t *testing.T) {
 	item = &Item{
 		Event: "banana",
 		Param: "xatarstiarsd",
-		When:  9,
+		Timed: 9,
 	}
 	heap.Push(&pq, item)
 

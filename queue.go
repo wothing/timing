@@ -1,8 +1,8 @@
 package timing
 
 type Item struct {
-	Id    uint32
-	When  uint32
+	Id    string
+	Timed uint32
 	Event string
 	Param string
 }
@@ -14,7 +14,7 @@ func (q Queue) Len() int {
 }
 
 func (q Queue) Less(i, j int) bool {
-	return q[i].When < q[j].When
+	return q[i].Timed < q[j].Timed
 }
 
 func (q Queue) Swap(i, j int) {
