@@ -30,7 +30,9 @@ var (
 func Init(items ...*Item) {
 	q := make(Queue, len(items), 1024)
 	for i, item := range items {
+		item.Id = uint32(i)
 		q[i] = item
+		PersistFunc(item)
 	}
 	go start(q)
 }
@@ -47,6 +49,8 @@ func Add(items ...*Item) {
 func start(q Queue) {
 	heap.Init(&q)
 
+	var next = uint32(q.Len())
+
 	var min *Item
 	var timer = time.NewTimer(24 * time.Hour)
 
@@ -59,6 +63,9 @@ func start(q Queue) {
 	for {
 		select {
 		case item := <-stage:
+			item.Id = next
+			next++
+
 			if min == nil {
 				// do nothing
 			} else if item.When < min.When {
