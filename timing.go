@@ -4,8 +4,6 @@ import (
 	"container/heap"
 	"fmt"
 	"time"
-
-	"github.com/arstd/log"
 )
 
 type HandlerFunc func(when time.Time, item *Item)
@@ -14,78 +12,84 @@ var Handler = func(when time.Time, item *Item) {
 	fmt.Printf("default handler, timer %s, item %#v\n", when, item)
 }
 
-var q Queue
-var reset = make(chan *Item)
-var min *Item // 最近的元素
+var stage = make(chan *Item)
 
-func init() {
-	q = make(Queue, 0)
-	heap.Init(&q)
+var inited = make(chan struct{})
 
-	go wait()
+// Init 初始化定时器，并启动
+func Init(q Queue) {
+	if q == nil {
+		q = make(Queue, 0, 1024)
+	}
+	go start(q)
 }
 
-func wait() {
-	timer := time.NewTimer(24 * time.Hour)
+// Add 用来设置定时项，必须先 Init，否则 Add 会一直等待 Init
+func Add(items ...*Item) {
+	<-inited
+
+	for _, item := range items {
+		// process
+		stage <- item
+	}
+}
+
+func start(q Queue) {
+	var (
+		min   *Item
+		timer *time.Timer
+	)
+	heap.Init(&q)
+
+	if len(q) > 0 {
+		min = heap.Pop(&q).(*Item)
+		timer = time.NewTimer(time.Unix(int64(min.When), 0).Sub(time.Now()))
+	} else {
+		timer = time.NewTimer(24 * time.Hour)
+	}
+	close(inited)
+
 	for {
 		select {
-		case item := <-reset:
-			log.Warnf("get item %s %d", item.Label, item.When)
-			log.Warnf("min item %#v", min)
+		case item := <-stage:
 			if min == nil {
 				// do nothing
 			} else if item.When < min.When {
-				log.Debugf("heap len %d", q.Len())
 				heap.Push(&q, min)
-				log.Debugf("min label %s in heap", min.Label)
-				log.Debugf("heap len %d", q.Len())
 			} else if item.When > min.When {
 				heap.Push(&q, item)
 				break
 			}
 
 			min = item
+
 			until := time.Unix(int64(min.When), 0)
 			dur := until.Sub(time.Now())
 			timer.Reset(dur)
-			log.Debugf("reset to %s, %s", dur, until)
 
 		case now := <-timer.C:
-			log.Infof("<<< timing %s", now)
-			Handler(now, min)
+			go Handler(now, min)
 
 			if q.Len() == 0 {
 				min = nil
-				log.Info("no item in heap")
+				// fmt.Println("no item in heap")
 				timer.Reset(24 * time.Hour)
 				break
 			}
 
 			h := heap.Pop(&q)
 			if h == nil {
-				log.Error("pop nil from heap")
+				min = nil
+				// fmt.Println("pop nil from heap")
 				timer.Reset(24 * time.Hour)
 				break
 			}
 
 			min = h.(*Item)
+
 			until := time.Unix(int64(min.When), 0)
 			dur := until.Sub(time.Now())
 			timer.Reset(dur)
-			log.Debugf("reset to %s, %s", dur, until)
 		}
 	}
-}
-
-func Set(when time.Time, label string) {
-	SetUnix(uint32(when.Unix()), label)
-}
-
-func SetUnix(when uint32, label string) {
-	log.Debugf("set %s, %s", label, time.Unix(int64(when), 0))
-	item := &Item{
-		When:  when,
-		Label: label,
-	}
-	reset <- item
 }

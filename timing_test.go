@@ -9,50 +9,37 @@ import (
 
 func TestTiming(t *testing.T) {
 	Handler = func(t time.Time, item *Item) {
-		log.Infof("log handler, timer %s", t)
-		log.JSON(min)
+		log.Infof("log handler, timer %s, %+v", t, item)
 	}
 
-	when := time.Now().Add(15 * time.Second)
-	Set(when, "===> 15")
-
-	when = when.Add(-10 * time.Second)
-	Set(when, "===>  5")
-
+	q := make(Queue, 0)
+	when := time.Now().Add(2 * time.Second)
+	q = append(q, &Item{When: uint32(when.Unix()), Label: "label_2"})
 	when = when.Add(5 * time.Second)
-	Set(when, "===> 10")
+	q = append(q, &Item{When: uint32(when.Unix()), Label: "label_7"})
+	when = when.Add(-3 * time.Second)
+	q = append(q, &Item{When: uint32(when.Unix()), Label: "label_4"})
+	when = when.Add(-3 * time.Second)
+	q = append(q, &Item{When: uint32(when.Unix()), Label: "label_1"})
+	Init(q)
 
-	time.Sleep(20 * time.Second)
+	when = when.Add(8 * time.Second)
+	Add(&Item{When: uint32(when.Unix()), Label: "label_9"})
+	when = when.Add(-6 * time.Second)
+	Add(&Item{When: uint32(when.Unix()), Label: "label_3"})
+	when = when.Add(5 * time.Second)
+	Add(&Item{When: uint32(when.Unix()), Label: "label_8"})
+	when = when.Add(-3 * time.Second)
+	Add(&Item{When: uint32(when.Unix()), Label: "label_5"})
 
-	when = when.Add(15 * time.Second)
-	Set(when, "===> 25")
+	time.Sleep(10 * time.Second)
 
-	time.Sleep(20 * time.Second)
+	when = when.Add(7 * time.Second)
+	Add(&Item{When: uint32(when.Unix()), Label: "label_12"})
+	when = when.Add(-1 * time.Second)
+	Add(&Item{When: uint32(when.Unix()), Label: "label_11"})
+	when = when.Add(3 * time.Second)
+	Add(&Item{When: uint32(when.Unix()), Label: "label_14"})
+
+	time.Sleep(5 * time.Second)
 }
-
-//
-// func TestTimer(tt *testing.T) {
-// 	t := time.NewTimer(100 * time.Second)
-// 	reset := make(chan time.Duration)
-// 	go func() {
-// 		reset <- 5 * time.Second
-// 		reset <- 3 * time.Second
-// 		reset <- 2 * time.Second
-// 	}()
-// 	for {
-// 		select {
-// 		case d := <-reset:
-// 			log.Debugf("reset %s", d)
-// 			t.Reset(d)
-// 		case now := <-t.C:
-// 			log.Debug(now.Format("2006-01-02 15:04:05"))
-//
-// 			// if !t.Stop() {
-// 			// 	now := <-t.C
-// 			// 	log.Warnf("stop faild, timer %s", now)
-// 			// }
-// 			t.Reset(100 * time.Second)
-// 		}
-// 	}
-//
-// }
