@@ -6,20 +6,31 @@ import (
 	"time"
 )
 
-type HandlerFunc func(when time.Time, item *Item)
+type HandlerFunc func(items ...*Item)
 
-var Handler = func(when time.Time, item *Item) {
-	fmt.Printf("default handler, timer %s, item %#v\n", when, item)
-}
+var (
+	// PersistFunc 落地定时项，以便系统重启后，恢复定时项
+	PersistFunc HandlerFunc = func(items ...*Item) {}
 
-var stage = make(chan *Item)
+	// RemoveFunc 时间到了，从落地库中移除定时项
+	RemoveFunc HandlerFunc = func(items ...*Item) {}
 
-var inited = make(chan struct{})
+	// RemindFunc 时间到了，提醒，处理定时项
+	RemindFunc HandlerFunc = func(items ...*Item) {
+		fmt.Printf("default remind: %#v\n", items)
+	}
+)
+
+var (
+	stage  = make(chan *Item)
+	inited = make(chan struct{})
+)
 
 // Init 初始化定时器，并启动
-func Init(q Queue) {
-	if q == nil {
-		q = make(Queue, 0, 1024)
+func Init(items ...*Item) {
+	q := make(Queue, len(items), 1024)
+	for i, item := range items {
+		q[i] = item
 	}
 	go start(q)
 }
@@ -29,23 +40,19 @@ func Add(items ...*Item) {
 	<-inited
 
 	for _, item := range items {
-		// process
 		stage <- item
 	}
 }
 
 func start(q Queue) {
-	var (
-		min   *Item
-		timer *time.Timer
-	)
 	heap.Init(&q)
+
+	var min *Item
+	var timer = time.NewTimer(24 * time.Hour)
 
 	if len(q) > 0 {
 		min = heap.Pop(&q).(*Item)
 		timer = time.NewTimer(time.Unix(int64(min.When), 0).Sub(time.Now()))
-	} else {
-		timer = time.NewTimer(24 * time.Hour)
 	}
 	close(inited)
 
@@ -62,13 +69,19 @@ func start(q Queue) {
 			}
 
 			min = item
+			PersistFunc(min)
 
 			until := time.Unix(int64(min.When), 0)
 			dur := until.Sub(time.Now())
 			timer.Reset(dur)
 
-		case now := <-timer.C:
-			go Handler(now, min)
+		case <-timer.C:
+			if min != nil {
+				go func(item *Item) {
+					RemoveFunc(item)
+					RemindFunc(item)
+				}(min)
+			}
 
 			if q.Len() == 0 {
 				min = nil
@@ -77,15 +90,7 @@ func start(q Queue) {
 				break
 			}
 
-			h := heap.Pop(&q)
-			if h == nil {
-				min = nil
-				// fmt.Println("pop nil from heap")
-				timer.Reset(24 * time.Hour)
-				break
-			}
-
-			min = h.(*Item)
+			min = heap.Pop(&q).(*Item)
 
 			until := time.Unix(int64(min.When), 0)
 			dur := until.Sub(time.Now())

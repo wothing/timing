@@ -27,14 +27,16 @@ func TestQueue(t *testing.T) {
 
 	// Insert a new item and then modify its priority.
 	item := &Item{
-		Label: "orange",
+		Event: "orange",
+		Param: "xatarstiarsd",
 		When:  13,
 	}
 	heap.Push(&pq, item)
 
 	// Insert a new item and then modify its priority.
 	item = &Item{
-		Label: "banana",
+		Event: "banana",
+		Param: "xatarstiarsd",
 		When:  9,
 	}
 	heap.Push(&pq, item)
@@ -42,6 +44,6 @@ func TestQueue(t *testing.T) {
 	// Take the items out; they arrive in decreasing priority order.
 	for pq.Len() > 0 {
 		item := heap.Pop(&pq).(*Item)
-		fmt.Printf("%d %s ", item.When, item.Label)
+		fmt.Printf("%+v\n", item)
 	}
 }

@@ -8,38 +8,39 @@ import (
 )
 
 func TestTiming(t *testing.T) {
-	Handler = func(t time.Time, item *Item) {
-		log.Infof("log handler, timer %s, %+v", t, item)
+	RemindFunc = func(item ...*Item) {
+		log.Infof("log handler: %+v", item[0])
 	}
 
 	q := make(Queue, 0)
 	when := time.Now().Add(2 * time.Second)
-	q = append(q, &Item{When: uint32(when.Unix()), Label: "label_2"})
+	q = append(q, &Item{When: uint32(when.Unix()), Event: "test", Param: "label_2"})
 	when = when.Add(5 * time.Second)
-	q = append(q, &Item{When: uint32(when.Unix()), Label: "label_7"})
+	q = append(q, &Item{When: uint32(when.Unix()), Event: "test", Param: "label_7"})
 	when = when.Add(-3 * time.Second)
-	q = append(q, &Item{When: uint32(when.Unix()), Label: "label_4"})
+	q = append(q, &Item{When: uint32(when.Unix()), Event: "test", Param: "label_4"})
 	when = when.Add(-3 * time.Second)
-	q = append(q, &Item{When: uint32(when.Unix()), Label: "label_1"})
-	Init(q)
+	q = append(q, &Item{When: uint32(when.Unix()), Event: "test", Param: "label_1"})
+
+	Init(q...)
 
 	when = when.Add(8 * time.Second)
-	Add(&Item{When: uint32(when.Unix()), Label: "label_9"})
+	Add(&Item{When: uint32(when.Unix()), Event: "test", Param: "label_9"})
 	when = when.Add(-6 * time.Second)
-	Add(&Item{When: uint32(when.Unix()), Label: "label_3"})
+	Add(&Item{When: uint32(when.Unix()), Event: "test", Param: "label_3"})
 	when = when.Add(5 * time.Second)
-	Add(&Item{When: uint32(when.Unix()), Label: "label_8"})
+	Add(&Item{When: uint32(when.Unix()), Event: "test", Param: "label_8"})
 	when = when.Add(-3 * time.Second)
-	Add(&Item{When: uint32(when.Unix()), Label: "label_5"})
+	Add(&Item{When: uint32(when.Unix()), Event: "test", Param: "label_5"})
 
 	time.Sleep(10 * time.Second)
 
 	when = when.Add(7 * time.Second)
-	Add(&Item{When: uint32(when.Unix()), Label: "label_12"})
+	Add(&Item{When: uint32(when.Unix()), Event: "test", Param: "label_12"})
 	when = when.Add(-1 * time.Second)
-	Add(&Item{When: uint32(when.Unix()), Label: "label_11"})
+	Add(&Item{When: uint32(when.Unix()), Event: "test", Param: "label_11"})
 	when = when.Add(3 * time.Second)
-	Add(&Item{When: uint32(when.Unix()), Label: "label_14"})
+	Add(&Item{When: uint32(when.Unix()), Event: "test", Param: "label_14"})
 
 	time.Sleep(5 * time.Second)
 }

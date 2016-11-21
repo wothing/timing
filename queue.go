@@ -1,8 +1,10 @@
 package timing
 
 type Item struct {
+	Id    uint32
 	When  uint32
-	Label string
+	Event string
+	Param string
 }
 
 type Queue []*Item
