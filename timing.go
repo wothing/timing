@@ -57,7 +57,7 @@ func start(q Queue) {
 
 	if len(q) > 0 {
 		min = heap.Pop(&q).(*Item)
-		timer = time.NewTimer(time.Unix(int64(min.Timed), 0).Sub(time.Now()))
+		timer.Reset(time.Unix(int64(min.Timed), 0).Sub(time.Now()))
 	}
 
 	close(inited)
