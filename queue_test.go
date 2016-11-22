@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestQueue(t *testing.T) {
+func xTestQueue(t *testing.T) {
 	// items := map[string]uint32{
 	// 	"banana": 3, "apple": 2, "pear": 4,
 	// }

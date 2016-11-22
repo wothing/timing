@@ -42,5 +42,8 @@ func TestTiming(t *testing.T) {
 	when = when.Add(3 * time.Second)
 	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_14"})
 
+	when = when.Add(-30 * time.Second)
+	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_-30"})
+
 	time.Sleep(5 * time.Second)
 }

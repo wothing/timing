@@ -85,7 +85,7 @@ func start(q Queue) {
 			if min != nil {
 				go func(item *Item) {
 					RemindFunc(item)
-					DeleteFunc(min)
+					DeleteFunc(item)
 				}(min)
 			}
 
