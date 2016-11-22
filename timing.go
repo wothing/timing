@@ -84,8 +84,8 @@ func start(q Queue) {
 		case <-timer.C:
 			if min != nil {
 				go func(item *Item) {
-					DeleteFunc(item)
 					RemindFunc(item)
+					DeleteFunc(min)
 				}(min)
 			}
 
