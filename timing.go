@@ -3,6 +3,7 @@ package timing
 import (
 	"container/heap"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/pborman/uuid"
@@ -28,22 +29,30 @@ var (
 	inited = make(chan struct{})
 )
 
+var once sync.Once
+
 // Init 初始化定时器，并启动
 func Init(items ...*Item) {
-	q := make(Queue, len(items), 1024)
-	for i, item := range items {
-		// item.Id = uuid.New()
-		// PersistFunc(item) // 初始化最大可能是从落地库中恢复定时项，无需重复落地
-		q[i] = item
-	}
-	go start(q)
+	once.Do(func() {
+		q := make(Queue, len(items), 1024)
+		for i, item := range items {
+			// item.Id = uuid.New()
+			// PersistFunc(item) // 初始化最大可能是从落地库中恢复定时项，无需重复落地
+			q[i] = item
+		}
+		go start(q)
+	})
 }
 
 // Add 用来添加定时项并设置ID，必须先 Init，否则 Add 会一直等待 Init
 func Add(items ...*Item) {
 	<-inited
 
+	now := uint32(time.Now().Unix())
 	for _, item := range items {
+		if item.Timed < now {
+			RemindFunc(item)
+		}
 		item.Id = uuid.New()
 		stage <- item
 	}
@@ -70,37 +79,47 @@ func start(q Queue) {
 				// do nothing
 			} else if item.Timed < min.Timed {
 				heap.Push(&q, min)
-			} else if item.Timed > min.Timed {
+			} else {
 				heap.Push(&q, item)
 				break
 			}
 
 			min = item
 
-			until := time.Unix(int64(min.Timed), 0)
-			dur := until.Sub(time.Now())
-			timer.Reset(dur)
+			timer.Reset(time.Unix(int64(min.Timed), 0).Sub(time.Now()))
 
 		case <-timer.C:
+
 			if min != nil {
-				go func(item *Item) {
-					RemindFunc(item)
-					DeleteFunc(item)
-				}(min)
+				timeup := []*Item{min}
+
+				for {
+					if q.Len() == 0 {
+						min = nil
+						// fmt.Println("no item in heap")
+						break
+					}
+
+					temp := heap.Pop(&q).(*Item)
+					if temp.Timed != min.Timed {
+						min = temp
+						break
+					}
+					timeup = append(timeup, temp)
+				}
+
+				go func(timeup []*Item) {
+					RemindFunc(timeup...)
+					DeleteFunc(timeup...)
+				}(timeup)
 			}
 
-			if q.Len() == 0 {
-				min = nil
-				// fmt.Println("no item in heap")
+			if min == nil {
 				timer.Reset(24 * time.Hour)
 				break
 			}
 
-			min = heap.Pop(&q).(*Item)
-
-			until := time.Unix(int64(min.Timed), 0)
-			dur := until.Sub(time.Now())
-			timer.Reset(dur)
+			timer.Reset(time.Unix(int64(min.Timed), 0).Sub(time.Now()))
 		}
 	}
 }

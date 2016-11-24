@@ -14,7 +14,7 @@ func (q Queue) Len() int {
 }
 
 func (q Queue) Less(i, j int) bool {
-	return q[i].Timed < q[j].Timed
+	return q[i].Timed <= q[j].Timed
 }
 
 func (q Queue) Swap(i, j int) {

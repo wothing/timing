@@ -5,45 +5,40 @@ import (
 	"time"
 
 	"github.com/arstd/log"
+	"github.com/pborman/uuid"
 )
 
 func TestTiming(t *testing.T) {
-	RemindFunc = func(item ...*Item) {
-		log.Infof("log handler: %+v", item[0])
+	RemindFunc = func(items ...*Item) {
+		log.JSON("remind", items)
 	}
 
-	q := make(Queue, 0)
-	when := time.Now().Add(2 * time.Second)
-	q = append(q, &Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_2"})
-	when = when.Add(5 * time.Second)
-	q = append(q, &Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_7"})
-	when = when.Add(-3 * time.Second)
-	q = append(q, &Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_4"})
-	when = when.Add(-3 * time.Second)
-	q = append(q, &Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_1"})
+	when := uint32(time.Now().Add(time.Second).Unix())
 
-	Init(q...)
+	// load data
+	loaded := []*Item{
+		{Id: uuid.New(), Timed: when + 2, Event: "test", Param: "2"},
+		{Id: uuid.New(), Timed: when + 10, Event: "test", Param: "10"},
+		{Id: uuid.New(), Timed: when + 2, Event: "test", Param: "2"},
+		{Id: uuid.New(), Timed: when + 4, Event: "test", Param: "4"},
+	}
+	Init(loaded...)
 
-	when = when.Add(8 * time.Second)
-	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_9"})
-	when = when.Add(-6 * time.Second)
-	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_3"})
-	when = when.Add(5 * time.Second)
-	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_8"})
-	when = when.Add(-3 * time.Second)
-	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_5"})
+	loaded = []*Item{
+		{Id: uuid.New(), Timed: when + 3, Event: "test", Param: "3"},
+		{Id: uuid.New(), Timed: when + 5, Event: "test", Param: "5"},
+	}
+	Init(loaded...) // ingored
+
+	Add(&Item{Timed: when + 2, Event: "test", Param: "2"})
+	Add(&Item{Timed: when + 5, Event: "test", Param: "5"})
+	Add(&Item{Timed: when + 9, Event: "test", Param: "9"})
 
 	time.Sleep(10 * time.Second)
 
-	when = when.Add(7 * time.Second)
-	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_12"})
-	when = when.Add(-1 * time.Second)
-	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_11"})
-	when = when.Add(3 * time.Second)
-	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_14"})
-
-	when = when.Add(-30 * time.Second)
-	Add(&Item{Timed: uint32(when.Unix()), Event: "test", Param: "label_-30"})
+	Add(&Item{Timed: when + 14, Event: "test", Param: "14"})
+	Add(&Item{Timed: when + 12, Event: "test", Param: "12"})
+	Add(&Item{Timed: when + 14, Event: "test", Param: "14"})
 
 	time.Sleep(5 * time.Second)
 }
