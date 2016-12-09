@@ -52,8 +52,11 @@ func Add(items ...*Item) {
 	for _, item := range items {
 		if item.Timed < now {
 			RemindFunc(item)
+			continue
 		}
-		item.Id = uuid.New()
+		if item.Id == "" {
+			item.Id = uuid.New()
+		}
 		stage <- item
 	}
 }
